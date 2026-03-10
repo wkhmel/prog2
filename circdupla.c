@@ -68,3 +68,5 @@ int insere_ma(struct lista_maq *li, struct maq *ma) {
 	return 1;
 }
 
+
+
