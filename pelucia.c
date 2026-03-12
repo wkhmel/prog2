@@ -102,12 +102,15 @@
         struct lista_ma *li = cria_lista();
         for (int i = 0; i < n; i++)
             insere_li(li, i);
-        int select = -1;
-        while (li->qtd > 0 && select != 0) {
-            printf("Insira 1 para jogar e 0 para encerrar o dia\n");
+        while (li->qtd > 0) {
+            printf("1 - jogar\n");
+            printf("0 - encerrar o dia\n");
+            int select;
             scanf("%d", &select);
             if (select == 1)
                 jogada(li);
+            if (li->qtd == 0 || select == 0)
+                break;
         }
         oqsobra(li);
     }
