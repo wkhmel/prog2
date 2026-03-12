@@ -107,7 +107,7 @@
             printf("Insira 1 para jogar e 0 para encerrar o dia\n");
             scanf("%d", &select);
             if (select == 1)
-            jogada(li);
+                jogada(li);
         }
         oqsobra(li);
     }
