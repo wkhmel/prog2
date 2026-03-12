@@ -72,10 +72,10 @@
         int num_ma = rand() % li->qtd;
         struct ma *aux = li->sentinela->prox;
         printf("Chance do jogador: %d\n", jogada);
-        printf("Chance da maquina: %d\n", aux->prob);
         printf("Numero da maquina: %d\n", num_ma);
         for (int i = 0; i < num_ma; i++) /* não verifiquei se aux n volta pro começo pq vou supor que a máquina sorteada tem que estar lá de qualquer jeito */
             aux = aux->prox;
+        printf("Chance da maquina: %d\n", aux->prob);
         if (jogada > aux->prob) 
             printf("Que pena! Jogador perdeu\n");
         else {
