@@ -99,5 +99,20 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
                 fwrite(buffer, 1, lidos, destino)
         }
 
-        
+        /* cria um vetor auxiliar que recebe realloc para aumentar o seu tamanho */
+        /* não alteramos diretamente o lib->docs para não o perdermos caso a realocação não dê certo */
+        Document *aux = realloc(lib->docs, sizeof(Document)*(lib->count + 1));
+
+        if (!aux) {
+                fprintf(stderr, "Falha ao criar documento.\n");
+                return 0;
+        }
+
+        /* se o realloc deu certo, atualizo o lib->docs para o auxiliar que criei */
+        lib->docs = aux;
+        /* o tamanho do documento do último índice é o tamanho do arquivo */
+        lib->docs[lib->count].size = tam_arquivo;
+        /* mesma coisa para o offset: recebe o atual do destino */
+        lib->docs[lib->count].offset = offset_atual;
+        lib->count++;
 }
