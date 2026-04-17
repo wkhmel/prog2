@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "gbv.h"
+#include "util.h"
 
 typedef struct {
         int qtd_doc; // quantos documentos esse superbloco tem
@@ -34,11 +36,11 @@ int gbv_create(const char *filename) {
 /* abre o arquivo */
 int gbv_open(Library *lib, const char *filename) {
 	if (!lib || !filename) {
-		fprintf(stderr, "Ponteiro nulo\n")
+		fprintf(stderr, "Ponteiro nulo\n");
 		return -1;
 	}
 
-    FILE *arquivo = fopen(filename, "rb"); / abrindo o documento */
+    FILE *arquivo = fopen(filename, "rb"); /* abrindo o documento */
 
     if (!arquivo) {
         fprintf(stderr, "Erro ao abrir o arquivo.\n");
@@ -51,7 +53,7 @@ int gbv_open(Library *lib, const char *filename) {
     /* verificamos se deu 1, pois é o resultado que fread dá em sucesso */
     if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
         fclose(arquivo);
-		return -1
+		return -1;
 	} 
     
 	/* vai c o ponteiro do início do arquivo até onde o diretório começa */
@@ -69,7 +71,7 @@ int gbv_open(Library *lib, const char *filename) {
 
     int x = 0;
 
-    if (fread(lib->docs, sizeof(Document), sb.qtd_doc, f) != sb.qtd_doc) {
+    if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
         fprintf(stderr, "Falha ao ler o arquivo.\n");
         free(lib->docs);
         x = -1;
@@ -80,10 +82,10 @@ int gbv_open(Library *lib, const char *filename) {
     return x;
 }
 
-int gbv_find(Library *lib, const char *procurado) {
+int gbv_find(Library *lib, char *procurado) {
     /* inicializando com -1 para o caso de n ter nome repetido */
     for (int i = 0; i < lib->count; i++) {
-        if (strcmp(lib->docs[i].name, docname) == 0) {
+        if (strcmp(lib->docs[i].name, procurado) == 0) {
             return i;
         }
     
@@ -116,7 +118,8 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
 
     /* tentando colocar o primeiro bloco do destino de tamanho "Superblock" para &sb */
     if (fread(&sb, sizeof(Superblock), 1, destino) != 1) {
-        fclose(arquivo);
+        fclose(doc_insercao);
+		fclose(destino);
         return -1;
     }
 
