@@ -26,6 +26,7 @@ int gbv_create(const char *filename) {
     int x = 0;
     /* escrevendo no arquivo as informações sobre o superbloco */
     if (!(fwrite(&sb, sizeof(Superblock), 1, arquivo))) {
+	    fprintf(stderr, "Erro ao escrever no arquivo.\n");
         x = -1;
     }
 
@@ -52,6 +53,7 @@ int gbv_open(Library *lib, const char *filename) {
     /* o ponteiro do arquivo tbm muda para depois do superbloco */
     /* verificamos se deu 1, pois é o resultado que fread dá em sucesso */
     if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
+		fprintf(stderr, "Erro ao ler o arquivo.\n");
         fclose(arquivo);
 		return -1;
 	} 
@@ -65,14 +67,15 @@ int gbv_open(Library *lib, const char *filename) {
 	lib->docs = malloc(sizeof(Document)*sb.qtd_doc);
 
 	if (!lib->docs) {
-		fprintf(stderr, "Falha ao alocar memoria.\n");
+		fprintf(stderr, "Erro ao alocar memoria.\n");
+		fclose(arquivo);
         return -1;
 	}
 
     int x = 0;
 
     if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
-        fprintf(stderr, "Falha ao ler o arquivo.\n");
+        fprintf(stderr, "Erro ao ler o arquivo.\n");
         free(lib->docs);
         x = -1;
     }
@@ -88,6 +91,7 @@ int gbv_find(Library *lib, char *procurado) {
         if (strcmp(lib->docs[i].name, procurado) == 0) {
             return i;
         }
+	}
     
     return -1;
 }
@@ -118,6 +122,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
 
     /* tentando colocar o primeiro bloco do destino de tamanho "Superblock" para &sb */
     if (fread(&sb, sizeof(Superblock), 1, destino) != 1) {
+		fprintf(stderr, "Erro ao ler o arquivo.\n");
         fclose(doc_insercao);
 		fclose(destino);
         return -1;
@@ -202,7 +207,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
 
 int gbv_remove(Library *lib, const char *archive, const char *docname) {
     if (!lib || !docname) {
-        fprintf(stderr, "Ponteiro nulo.\n")
+        fprintf(stderr, "Ponteiro nulo.\n");
         return -1;
     }
 
@@ -293,7 +298,7 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
 		
         buffer[lidos] = '\0';
 
-        printf("\n--- Visualizando: %s (Bloco %d de %d) ---\n", docname, bloco_atual + 1, total_blocos);
+        printf("\n--- Visualizando: %s (Bloco %d de %d) ---\n", docname, bloco_atual + 1, qtd_blocos);
         printf("%s\n", buffer);
         printf("-------------------------------------------\n");
         printf("(n) -> proximo bloco\n");
