@@ -85,7 +85,7 @@ int gbv_open(Library *lib, const char *filename) {
     return x;
 }
 
-int gbv_find(Library *lib, char *procurado) {
+int gbv_find(Library *lib, const char *procurado) {
     /* inicializando com -1 para o caso de n ter nome repetido */
     for (int i = 0; i < lib->count; i++) {
         if (strcmp(lib->docs[i].name, procurado) == 0) {
