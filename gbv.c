@@ -252,7 +252,7 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
     int idx = gbv_find(lib, docname);
 
     if (idx == -1) {
-        fprintf("Arquivo %s nao encontrado.\n", docname);
+        fprintf(stderr, "Arquivo %s nao encontrado.\n", docname);
         return -1;
     }
 
@@ -263,9 +263,8 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    int ja_lido, falta_ler;
     int bloco_atual = 0;
-    char opcao; /* opção escolhida pelo usuário (p,q,n)*/
+    char select; /* opção escolhida pelo usuário (p,q,n)*/
     unsigned char buffer[BUFFER_SIZE + 1];
 
     int qtd_blocos = (lib->docs[idx].size + BUFFER_SIZE - 1)/BUFFER_SIZE;
@@ -275,16 +274,20 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         /* posição atual = inicio do documento + (bloco atual * tamanho dele) */
         long posicao = lib->docs[idx].offset + (bloco_atual * BUFFER_SIZE);
         fseek(arquivo, posicao, SEEK_SET); /* coloca o ponteiro do arquivo na posicao atual */
-        
-        falta_ler = BUFFER_SIZE; 
-        ja_lido = bloco_atual*BUFFER_SIZE;
-        
-        int lidos;
-        if ((lidos = fread(buffer, 1, falta_ler, f) != falta_ler) {
-            fprintf(stderr, "Erro ao ler o arquivo.\n");
-            fclose(arquivo);
-            return -1;
+
+        int falta_ler = BUFFER_SIZE; 
+        int ja_lido = bloco_atual*BUFFER_SIZE;
+		
+		if (ja_lido + BUFFER_SIZE > lib->docs[idx].size) {
+            falta_ler = lib->docs[idx].size - ja_lido;
         }
+		
+        int lidos = fread(buffer, 1, falta_ler, arquivo);
+        if (lidos < 0) {
+            fprintf(stderr, "Erro ao ler o arquivo.\n");
+            break;
+        }
+		
         buffer[lidos] = '\0';
 
         printf("\n--- Visualizando: %s (Bloco %d de %d) ---\n", docname, bloco_atual + 1, total_blocos);
@@ -298,11 +301,11 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
 
         if (select == 'q')
             break;
-        if (select == 'n' && atual < total - 1)
-            atual++;
-        if (select == 'p' && atual > 0)
-            atual--;
-        if (select != 'p' && c != 'n' && c != 'q')
+        if (select == 'n' && bloco_atual < qtd_blocos - 1)
+            bloco_atual++;
+        if (select == 'p' && bloco_atual > 0)
+            bloco_atual--;
+        if (select != 'p' && select != 'n' && select != 'q')
             printf("\nEntrada invalida.\n");
     }
 
