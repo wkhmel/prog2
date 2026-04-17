@@ -321,8 +321,3 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
     return 0;
 }
 
-
-int gbv_order(Library *lib, const char *archive, const char *criteria) {
-    if (!lib || !archive || !criteria)
-
-}
