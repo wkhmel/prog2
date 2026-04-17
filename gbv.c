@@ -205,7 +205,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     return x;
 }
 
-int gbv_remove(Library *lib, const char *archive, const char *docname) {
+int gbv_remove(Library *lib, const char *docname) {
     if (!lib || !docname) {
         fprintf(stderr, "Ponteiro nulo.\n");
         return -1;
@@ -238,13 +238,16 @@ int gbv_list(const Library *lib) {
         return 0;
     }
 
+	char data[32];
+	
     printf("Quantidade total de documentos: %d\n", lib->count);
-
+	
     for (int i = 0; i < lib->count; i++) {
+		format_date(lib->docs[i].date, data, sizeof(data));
         printf("Documento atual: %d -- ", i);
         printf("Nome: %s -- ", lib->docs[i].name);
         printf("Tamanho: %ld -- ", lib->docs[i].size);
-        printf("Data de insercao: %s --", format_date(lib->docs[i].date, data, sizeof(data)));
+        printf("Data de insercao: %s --", data);
         printf("Posicao (offset): %ld\n", lib->docs[i].offset);
     }
 
