@@ -73,29 +73,25 @@ int gbv_open(Library *lib, const char *filename) {
 
 	if (lib->count > 0) {
     	/* alocando o espaço pra todos os docs q precisa ter na livraria */
-		lib->docs = calloc(sb.qtd_doc, sizeof(Document)); /* podia ser *lib->count tbm mas acho q tanto faz */
-
+		lib->docs = malloc(sizeof(Document)*sb.qtd_doc); /* podia ser de qtd lib->count tbm mas acho q tanto faz */
+		
 		if (!lib->docs) {
 			fprintf(stderr, "Erro ao alocar memoria.\n");
 			fclose(arquivo); /* sempre lembrar de fechar!! */
         	return -1;
 		}
 
-		/*TERMINALR AQUI*/
+		if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
+        	fprintf(stderr, "Erro ao ler o arquivo.\n");
+        	free(lib->docs);
+        	return -1;
+    	}
 	}
 	else 
-		lib->docs == NULL;
+		lib->docs = NULL;
 	
-    int x = 0;
-
-    if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
-        fprintf(stderr, "Erro ao ler o arquivo.\n");
-        free(lib->docs);
-        x = -1;
-    }
-
     fclose(arquivo);
-    return x;
+    return 0;
 }
 
 int gbv_find(const Library *lib, const char *procurado) {
@@ -259,8 +255,6 @@ int gbv_remove(Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    lib->count--;
-
     int x = 0;
     rewind(arquivo);
 
@@ -296,7 +290,7 @@ int gbv_list(const Library *lib) {
         printf("Tamanho: %ld -- ", lib->docs[i].size);
         printf("Data de insercao: %s --", data);
         printf("Posicao (offset): %ld\n", lib->docs[i].offset);
-		printf("--------------------------------------------------------------------------------------------");
+		printf("--------------------------------------------------------------------------------------------\n");
     }
 
     return 0;
@@ -378,9 +372,9 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
             	bloco_atual--;
 			else
 				printf("\nEste ja eh o primeiro documento.\n");
+		}
         if (select != 'p' && select != 'n' && select != 'q')
             printf("\nEntrada invalida.\n");
-		}
     }
 
     fclose(arquivo);
