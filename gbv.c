@@ -282,6 +282,7 @@ int gbv_list(const Library *lib) {
 	char data[32];
 	
     printf("Quantidade total de documentos: %d\n", lib->count);
+	printf("\n");
 	
     for (int i = 0; i < lib->count; i++) {
 		format_date(lib->docs[i].date, data, sizeof(data));
@@ -290,7 +291,7 @@ int gbv_list(const Library *lib) {
         printf("Tamanho: %ld -- ", lib->docs[i].size);
         printf("Data de insercao: %s --", data);
         printf("Posicao (offset): %ld\n", lib->docs[i].offset);
-		printf("--------------------------------------------------------------------------------------------\n");
+		printf("-----------------------------------------------------------------------------------------------------\n");
     }
 
     return 0;
@@ -347,13 +348,8 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         printf("%s\n", buffer);
         printf("-------------------------------------------\n");
 
-		/* ve se já n ta no ultimo bloco pq senão n vou mostrar a opção de ir pro próximo */
-		if (bloco_atual < qtd_blocos - 1)
-        	printf("(n) -> proximo bloco\n");
-        
-		/* so vou dar a opção visual de ir pro ultimo bloco se eu ja n estiver no primeiro */
-		if (bloco_atual > 0)
-			printf("(p) -> bloco anterior\n");
+		printf("(n) -> proximo bloco\n");
+       	printf("(p) -> bloco anterior\n");
         printf("(q) -> sair da visualizacao\n");
         
         scanf(" %c", &select);
