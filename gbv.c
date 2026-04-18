@@ -374,6 +374,7 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
 				printf("\nEste ja eh o primeiro documento.\n");
         if (select != 'p' && select != 'n' && select != 'q')
             printf("\nEntrada invalida.\n");
+		}
     }
 
     fclose(arquivo);
