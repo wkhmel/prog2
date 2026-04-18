@@ -70,16 +70,22 @@ int gbv_open(Library *lib, const char *filename) {
     fseek(arquivo, sb.offset, SEEK_SET); 
     /* agora a qtd de docs na livraria é a mesma q a do superbloco */
 	lib->count = sb.qtd_doc;        
-    
-    /* alocando o espaço pra todos os docs q precisa ter na livraria */
-	lib->docs = malloc(sizeof(Document)*sb.qtd_doc); /* podia ser *lib->count tbm mas acho q tanto faz */
 
-	if (!lib->docs) {
-		fprintf(stderr, "Erro ao alocar memoria.\n");
-		fclose(arquivo); /* sempre lembrar de fechar!! */
-        return -1;
+	if (lib->count > 0) {
+    	/* alocando o espaço pra todos os docs q precisa ter na livraria */
+		lib->docs = calloc(sb.qtd_doc, sizeof(Document)); /* podia ser *lib->count tbm mas acho q tanto faz */
+
+		if (!lib->docs) {
+			fprintf(stderr, "Erro ao alocar memoria.\n");
+			fclose(arquivo); /* sempre lembrar de fechar!! */
+        	return -1;
+		}
+
+		/*TERMINALR AQUI*/
 	}
-
+	else 
+		lib->docs == NULL;
+	
     int x = 0;
 
     if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
