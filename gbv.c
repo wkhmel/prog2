@@ -317,57 +317,67 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    int bloco_atual = 0;
+    long bytes_lidos = 0;
+	
+	long falta_ler;
+	int lidos;
+	int ler_agr;
     char select; /* opção escolhida pelo usuário (p,q,n)*/
     unsigned char buffer[BUFFER_SIZE + 1];
-
-    int qtd_blocos = (lib->docs[idx].size + BUFFER_SIZE - 1)/BUFFER_SIZE;
-
+	
     while (1) {
 
-        /* posição atual = inicio do documento + (bloco atual * tamanho dele) */
-        long posicao = lib->docs[idx].offset + (bloco_atual * BUFFER_SIZE);
+        /* posição atual = inicio do documento + qtd de bytes lidos */
+        long posicao = lib->docs[idx].offset + bytes_lidos;
         fseek(arquivo, posicao, SEEK_SET); /* coloca o ponteiro do arquivo na posicao atual */
 
-        int falta_ler = BUFFER_SIZE; 
-        int ja_lido = bloco_atual*BUFFER_SIZE;
+        falta_ler = lib->docs[idx].size - bytes_lidos; /*tamanho total menos qto falta ler */
+
+		if (falta_ler > BUFFER_SIZE)
+			ler_agr = BUFFER_SIZE; /* lê só um bloco de no máx buffer_size de cada vez */
+		else
+			ler_agr = (int)falta_ler;
 		
-		if (ja_lido + BUFFER_SIZE > lib->docs[idx].size) {
-            falta_ler = lib->docs[idx].size - ja_lido;
-        }
+		memset(buffer, 0, sizeof(buffer)); /* limpa o buffer */
 		
-        int lidos = fread(buffer, 1, falta_ler, arquivo);
-        if (lidos < 0) {
+		if ((lidos = fread(buffer, 1, ler_agr, arquivo)) != (size_t)ler_agr) {
             fprintf(stderr, "Erro ao ler o arquivo.\n");
             break;
         }
 		
         buffer[lidos] = '\0';
 
-        printf("\n--- Visualizando: %s (Bloco %d de %d) ---\n", docname, bloco_atual + 1, qtd_blocos);
+        printf("\n--- Visualizando: %s (%ld bytes de %ld) ---\n", docname, bytes_lidos + lidos, lib->docs[idx].size);
         printf("%s\n", buffer);
         printf("-------------------------------------------\n");
 
-		printf("(n) -> proximo bloco\n");
-       	printf("(p) -> bloco anterior\n");
+		/* so dá a opção se tiver mais bytes para serem lidos */
+		if (bytes_lidos + lidos < lib->docs[idx].size)
+			printf("(n) -> proximo bloco; ");
+
+		if (bytes_lidos > 0)
+       		printf("(p) -> bloco anterior; ");
+		
         printf("(q) -> sair da visualizacao\n");
         
         scanf(" %c", &select);
 
         if (select == 'q')
             break;
+		
         if (select == 'n') {
-			if (bloco_atual < qtd_blocos - 1)
-            	bloco_atual++;
-			else
-				printf("\nEste ja eh o ultimo documento.\n");
+			if (bytes_lidos + BUFFER_SIZE < lib->docs[idx].size)
+            	bytes_lidos = bytes_lidos + BUFFER_SIZE;
+			else {
+				printf("\nVoce ja esta no ultimo bloco do arquivo.\n");
+			}
 		}
 			
         if (select == 'p') {
-			if (bloco_atual > 0)
-            	bloco_atual--;
+			if (bytes_lidos >= BUFFER_SIZE)
+            	bytes_lidos = bytes_lidos - BUFFER_SIZE;
 			else
-				printf("\nEste ja eh o primeiro documento.\n");
+				printf("\nVoce ja esta no primeiro bloco do arquivo.\n");
 		}
         if (select != 'p' && select != 'n' && select != 'q')
             printf("\nEntrada invalida.\n");
