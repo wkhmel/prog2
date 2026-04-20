@@ -5,26 +5,25 @@
 #include "util.h"
 
 typedef struct {
-	int qtd_doc; // quantos documentos esse superbloco tem
-    long offset; // em qual offset começa a área do diretório
+        int qtd_doc; // quantos documentos esse superbloco tem
+        long offset; // em qual offset começa a área do diretório
 } Superblock;
 
-/* cria um arquivo container e coloca o espaço necessário de um superbloco p/ inicializar */
-/* retorna 0 em sucesso e -1 em erro */
+/* cria um container e coloca o espaço necessário de um superbloco p/ inicializar */
+/* retorna 1 em sucesso e 0 em erro */
 int gbv_create(const char *filename) {
-	FILE *arquivo = fopen(filename, "wb"); /* abre arquivo para gravação */
+	FILE *arquivo = fopen(filename, "wb");
         
     if (!arquivo) {
         fprintf(stderr, "Erro ao abrir o arquivo.\n");
         return -1;
     }
-
+        
     Superblock sb;
     sb.qtd_doc = 0; /* começa sem documentos */
     sb.offset = sizeof(Superblock); /* ele vem dps do espaço ocupado pelo superbloco */
 
- 	/* criei essa variável pra n ter que fechar o arquivo dentro e fora do if */
-	int x = 0;
+    int x = 0;
     /* escrevendo no arquivo as informações sobre o superbloco */
     if (!(fwrite(&sb, sizeof(Superblock), 1, arquivo))) {
 	    fprintf(stderr, "Erro ao escrever no arquivo.\n");
@@ -38,63 +37,55 @@ int gbv_create(const char *filename) {
 /* abre o arquivo */
 int gbv_open(Library *lib, const char *filename) {
 	if (!lib || !filename) {
-		fprintf(stderr, "Ponteiro nulo.\n");
+		fprintf(stderr, "Ponteiro nulo\n");
 		return -1;
 	}
 
     FILE *arquivo = fopen(filename, "rb"); /* abrindo o documento */
 
     if (!arquivo) {
-        if (gbv_create(filename) != 0) { /* se a biblioteca ainda n existe eu tento criá-la */
-            fprintf(stderr, "Erro ao criar o arquivo.\n");
-            return -1;
-        }
-        arquivo = fopen(filename, "rb");
-        if (!arquivo) {
-            fprintf(stderr, "Erro ao abrir o arquivo.\n");
-            return -1;  
-	    }
-    }
+        fprintf(stderr, "Erro ao abrir o arquivo.\n");
+        return -1;
+	}
 
 	Superblock sb;
     /* o fread copia o q está no arquivo para sb */
     /* o ponteiro do arquivo tbm muda para depois do superbloco */
-    /* verificamos se deu 1, pois tem q ser a mesma qtd de arquivos q eu li (1) */
+    /* verificamos se deu 1, pois é o resultado que fread dá em sucesso */
     if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
 		fprintf(stderr, "Erro ao ler o arquivo.\n");
         fclose(arquivo);
 		return -1;
 	} 
     
-	/* vai com o ponteiro do início do arquivo até onde o diretório começa */
+	/* vai c o ponteiro do início do arquivo até onde o diretório começa */
     fseek(arquivo, sb.offset, SEEK_SET); 
     /* agora a qtd de docs na livraria é a mesma q a do superbloco */
 	lib->count = sb.qtd_doc;        
+    
+    /* alocando o espaço pra todos os docs q precisa ter na livraria */
+	lib->docs = malloc(sizeof(Document)*sb.qtd_doc);
 
-	if (lib->count > 0) {
-    	/* alocando o espaço pra todos os docs q precisa ter na livraria */
-		lib->docs = malloc(sizeof(Document)*sb.qtd_doc); /* podia ser de qtd lib->count tbm mas acho q tanto faz */
-		
-		if (!lib->docs) {
-			fprintf(stderr, "Erro ao alocar memoria.\n");
-			fclose(arquivo); /* sempre lembrar de fechar!! */
-        	return -1;
-		}
-
-		if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
-        	fprintf(stderr, "Erro ao ler o arquivo.\n");
-        	free(lib->docs);
-        	return -1;
-    	}
+	if (!lib->docs) {
+		fprintf(stderr, "Erro ao alocar memoria.\n");
+		fclose(arquivo);
+        return -1;
 	}
-	else 
-		lib->docs = NULL;
-	
+
+    int x = 0;
+
+    if (fread(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
+        fprintf(stderr, "Erro ao ler o arquivo.\n");
+        free(lib->docs);
+        x = -1;
+    }
+
     fclose(arquivo);
-    return 0;
+    /* para não ter q fechar dentro e fora da verificação do malloc */
+    return x;
 }
 
-int gbv_find(const Library *lib, const char *procurado) {
+int gbv_find(Library *lib, const char *procurado) {
     /* inicializando com -1 para o caso de n ter nome repetido */
     for (int i = 0; i < lib->count; i++) {
         if (strcmp(lib->docs[i].name, procurado) == 0) {
@@ -108,9 +99,14 @@ int gbv_find(const Library *lib, const char *procurado) {
 /* adiciona novos arquivos à biblioteca */
 int gbv_add(Library *lib, const char *archive, const char *docname) {
     if (!lib || !archive || !docname) {
-        fprintf(stderr, "Ponteiro nulo.\n");
+        fprintf(stderr, "Ponteiro nulo\n");
         return -1;
 	}
+
+    if (docname == archive) {
+        fprintf(stderr, "Voce nao pode inserir o proprio arquivo nele mesmo.\n");
+        return -1;
+    }    
 
 	FILE *doc_insercao = fopen(docname, "rb"); /* abrindo arquivo q quero inserir */
 
@@ -119,7 +115,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    FILE *destino = fopen(archive, "rb+"); /* destino q vai receber a inserção, p leitura e alteração (+) */
+    FILE *destino = fopen(archive, "rb+"); /* destino q vai receber a inserção */
 
     if (!destino) {
         fprintf(stderr, "Erro ao abrir o arquivo.\n");
@@ -137,7 +133,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    /* vou até onde começa o diretório de destino (começo + offset) */
+    /* vou até onde começa o diretório de destino */
     fseek(destino, sb.offset, SEEK_SET); 
     /* agr vou até a posição final do arquivo q quero inserir para saber o tamanho dele */
     fseek(doc_insercao, 0, SEEK_END);
@@ -145,10 +141,12 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     long tam_arquivo = ftell(doc_insercao);
     /* resetando para o começo */    
     rewind(doc_insercao);
+    /* agora estamos na posição em q começa o diretório novo */
+    fseek(destino, sb.offset, SEEK_SET);
 
     /* declaramos o buffer */
     unsigned char buffer[BUFFER_SIZE];
-    size_t lidos; /* qtd de bytes lidos em cada fread */
+    size_t lidos; /* qtd de bytes lidos em cada fwrite */
 
     while ((lidos = fread(buffer, 1, BUFFER_SIZE, doc_insercao)) > 0) {
         if (fwrite(buffer, 1, lidos, destino) != lidos) {
@@ -162,7 +160,7 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     Document *aux = realloc(lib->docs, sizeof(Document)*(lib->count + 1));
 
     if (!aux) {
-        fprintf(stderr, "Erro ao criar documento.\n");
+        fprintf(stderr, "Falha ao criar documento.\n");
         fclose(doc_insercao);
         fclose(destino);
         return -1;
@@ -171,9 +169,9 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     /* se deu certo o realloc, posso atualizar o lib->docs para o auxiliar q criei */
     lib->docs = aux;
     
-    int idx = gbv_find(lib, docname); /* procurando índice onde docname está no vet de nomes  */
+    int idx = gbv_find(lib, docname);
     
-    /* substituindo arquivos com o mesmo nome pelos mais recentes (fiz no final) */
+    /* pela definição do trabalho, substituímos artigos mais antigos com o mesmo nome */
     if (idx != -1) {
         for (int i = idx; i < lib->count - 1; i++) {
             lib->docs[i] = lib->docs[i + 1];            
@@ -183,16 +181,13 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
 
     /* passando todos os arquivos do docname para o último documento da biblioteca */
     strncpy(lib->docs[lib->count].name, docname, MAX_NAME - 1);
-    lib->docs[lib->count].name[MAX_NAME - 1] = '\0'; /* tem q terminar com /0 */
+    lib->docs[lib->count].name[MAX_NAME - 1] = '\0';
     lib->docs[lib->count].size = tam_arquivo;
     lib->docs[lib->count].offset = sb.offset;
-	lib->docs[lib->count].date = time(NULL);
-	
-    lib->count++; /* agora temos mais elementos (ou a mesma qtd se tivermos feito substituição) */
+    lib->count++; /* agora temos mais elementos (ou a mesma qtd se tivermos feito substituição )*/
 
-	sb.qtd_doc = lib->count; /* atualizando biblioteca */
-    sb.offset = ftell(destino); /* usando o fseek q fiz na linha 139 */
-	
+	sb.qtd_doc = lib->count;
+    sb.offset = ftell(destino);
     if (fwrite(lib->docs, sizeof(Document), lib->count, destino) != lib->count) {
         fprintf(stderr, "Erro ao escrever no arquivo.\n");
         fclose(doc_insercao);
@@ -215,59 +210,26 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     return x;
 }
 
-int gbv_remove(Library *lib, const char *archive, const char *docname) {
+int gbv_remove(Library *lib, const char *docname) {
     if (!lib || !docname) {
         fprintf(stderr, "Ponteiro nulo.\n");
         return -1;
     }
 
-    int idx = gbv_find(lib, docname); /* procurando em q índice ta o doc q quero excluir*/
+    int idx = gbv_find(lib, docname);
 
-    if (idx == -1) { /* no caso de o elemento a ser excluído do arquivo n estar no arquivo */
+    if (idx == -1) { /* caso de o elemento a ser excluído do arquivo n estar no arquivo */
         fprintf(stderr, "Arquivo %s nao encontrado.\n", docname);
         return -1;   
     }
 
-	/* vou substituir o elemento a ser removido pelo q está na frente e assim por diante */
     for (int i = idx; i < lib->count - 1; i++) {
         lib->docs[i] = lib->docs[i + 1];
     }
 
-	/* vou tirar o docname do disco pra ele n continuar aparecendo no view*/
-    FILE *arquivo = fopen(archive, "rb+"); 
-
-    if (!arquivo) {
-        fprintf(stderr, "Erro ao abrir o arquivo.\n");
-        return -1;
-    }
-
-    Superblock sb;
-    if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
-        fprintf(stderr, "Erro ao ler o arquivo.\n");
-        fclose(arquivo);
-        return -1;
-    }
-
-    sb.qtd_doc = lib->count - 1;
-    fseek(arquivo, sb.offset, SEEK_SET); /* vou até onde começa o diretório de destino */
-
-    if (fwrite(lib->docs, sizeof(Document), sb.qtd_doc, arquivo) != sb.qtd_doc) {
-        fprintf(stderr, "Erro ao escrever no arquivo.\n");
-        fclose(arquivo);
-        return -1;
-    }
-
-    int x = 0;
-    rewind(arquivo);
-
-    if (fwrite(&sb, sizeof(Superblock), 1, arquivo) != 1) {
-        fprintf(stderr, "Erro ao escrever no arquivo.\n");
-        x = -1;
-    }
-
     lib->count--;
-    fclose(arquivo);
-    return x;
+
+   return 0;
 }
 
 int gbv_list(const Library *lib) {
@@ -284,16 +246,14 @@ int gbv_list(const Library *lib) {
 	char data[32];
 	
     printf("Quantidade total de documentos: %d\n", lib->count);
-	printf("\n");
 	
     for (int i = 0; i < lib->count; i++) {
 		format_date(lib->docs[i].date, data, sizeof(data));
         printf("Documento atual: %d -- ", i);
         printf("Nome: %s -- ", lib->docs[i].name);
         printf("Tamanho: %ld -- ", lib->docs[i].size);
-        printf("Data de insercao: %s -- ", data);
+        printf("Data de insercao: %s --", data);
         printf("Posicao (offset): %ld\n", lib->docs[i].offset);
-		printf("-----------------------------------------------------------------------------------------------------\n");
     }
 
     return 0;
@@ -319,68 +279,49 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         return -1;
     }
 
-    long bytes_lidos = 0;
-	
-	long falta_ler;
-	int lidos;
-	int ler_agr;
+    int bloco_atual = 0;
+    
     char select; /* opção escolhida pelo usuário (p,q,n)*/
     unsigned char buffer[BUFFER_SIZE + 1];
-	
+
+    int qtd_blocos = (lib->docs[idx].size + BUFFER_SIZE - 1)/BUFFER_SIZE;
+
     while (1) {
 
-        /* posição atual = inicio do documento + qtd de bytes lidos */
-        long posicao = lib->docs[idx].offset + bytes_lidos;
+        /* posição atual = inicio do documento + (bloco atual * tamanho dele) */
+        long posicao = lib->docs[idx].offset + (bloco_atual * BUFFER_SIZE);
         fseek(arquivo, posicao, SEEK_SET); /* coloca o ponteiro do arquivo na posicao atual */
 
-        falta_ler = lib->docs[idx].size - bytes_lidos; /*tamanho total menos qto falta ler */
-
-		if (falta_ler > BUFFER_SIZE)
-			ler_agr = BUFFER_SIZE; /* lê só um bloco de no máx buffer_size de cada vez */
-		else
-			ler_agr = (int)falta_ler;
+        int falta_ler = BUFFER_SIZE; 
+        int ja_lido = bloco_atual*BUFFER_SIZE;
 		
-		memset(buffer, 0, sizeof(buffer)); /* limpa o buffer */
+		if (ja_lido + BUFFER_SIZE > lib->docs[idx].size) {
+            falta_ler = lib->docs[idx].size - ja_lido;
+        }
 		
-		if ((lidos = fread(buffer, 1, ler_agr, arquivo)) != (size_t)ler_agr) {
+        int lidos = fread(buffer, 1, falta_ler, arquivo);
+        if (lidos < 0) {
             fprintf(stderr, "Erro ao ler o arquivo.\n");
             break;
         }
 		
         buffer[lidos] = '\0';
 
-        printf("\n--- Visualizando: %s (%ld bytes de %ld) ---\n", docname, bytes_lidos + lidos, lib->docs[idx].size);
+        printf("\n--- Visualizando: %s (Bloco %d de %d) ---\n", docname, bloco_atual + 1, qtd_blocos);
         printf("%s\n", buffer);
         printf("-------------------------------------------\n");
-
-		/* so dá a opção se tiver mais bytes para serem lidos */
-		if (bytes_lidos + lidos < lib->docs[idx].size)
-			printf("(n) -> proximo bloco; ");
-
-		if (bytes_lidos > 0)
-       		printf("(p) -> bloco anterior; ");
-		
+        printf("(n) -> proximo bloco\n");
+        printf("(p) -> bloco anterior\n");
         printf("(q) -> sair da visualizacao\n");
         
         scanf(" %c", &select);
 
         if (select == 'q')
             break;
-		
-        if (select == 'n') {
-			if (bytes_lidos + BUFFER_SIZE < lib->docs[idx].size)
-            	bytes_lidos = bytes_lidos + BUFFER_SIZE;
-			else {
-				printf("\nVoce ja esta no ultimo bloco do arquivo.\n");
-			}
-		}
-			
-        if (select == 'p') {
-			if (bytes_lidos >= BUFFER_SIZE)
-            	bytes_lidos = bytes_lidos - BUFFER_SIZE;
-			else
-				printf("\nVoce ja esta no primeiro bloco do arquivo.\n");
-		}
+        if (select == 'n' && bloco_atual < qtd_blocos - 1)
+            bloco_atual++;
+        if (select == 'p' && bloco_atual > 0)
+            bloco_atual--;
         if (select != 'p' && select != 'n' && select != 'q')
             printf("\nEntrada invalida.\n");
     }
@@ -388,3 +329,62 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
     fclose(arquivo);
     return 0;
 }
+
+int gbv_order(Library *lib, const char *archive, const char *criteria) {
+    if (!lib || !criteria) {
+        fprintf(stderr, "Ponteiro nulo.\n");
+        return -1;
+    }
+
+    /* strcmp compara a string passada com a constante "nome" */
+    if (strcmp(criteria, "nome") == 0) { /* dá zero se as strings forem iguais */
+        qsort(lib->docs, lib->count, sizeof(Document), ordem_alfabetica);
+    } else if (strcmp(criteria, "tamanho") == 0) {
+        qsort(lib->docs, lib->count, sizeof(Document), ordem_tamanho);
+    } else if (strcmp(criteria, "data") == 0) {
+        qsort(lib->docs, lib->count, sizeof(Document), ordem_cronologica);
+    } else {
+        fprintf(stderr, "Criterio de ordenacao invalido.\n");
+        return -1;
+    }
+
+    FILE *arquivo = fopen(archive, "rb+"); /* alterar o diretorio*/
+
+    if (!arquivo) {
+        fprintf(stderr, "Erro ao abrir o arquivo.\n");
+        return -1;
+    }
+
+    Superblock sb;
+    /* fread serve para ler os dados do arquivo e colocar no superbloco */
+    if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
+        fprintf(stderr, "Erro ao ler o arquivo.\n");
+        fclose(arquivo);
+        return -1;
+    }
+
+    sb.qtd_doc = lib->count;
+    
+    fseek(arquivo, sb.offset, SEEK_SET); /* coloca o ponteiro do arquivo na posicao do superbloco*/
+
+    /* escrevendo os dados no arquivo */
+    if (fwrite(lib->docs, sizeof(Document), lib->count, arquivo) != lib->count) {
+        fprintf(stderr, "Erro ao escrever no arquivo.\n");
+        fclose(arquivo);
+        return -1;
+    }
+
+    /* voltando o ponteiro pro inicio do arquivo */
+    rewind(arquivo);
+    int x = 0;
+
+    if (fwrite(&sb, sizeof(Superblock), 1, arquivo) != 1) {
+        fprintf(stderr, "Erro ao escrever no arquivo.\n");
+        x = -1;
+    }
+
+    fclose(arquivo);
+    return x;
+
+}
+
