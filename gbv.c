@@ -118,10 +118,11 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
         return -1;
 	}
 
-    if (docname == archive) {
-        fprintf(stderr, "Voce nao pode inserir o proprio arquivo nele mesmo.\n");
-        return -1;
-    }    
+	/* comparando se os dois arquivos binarios são iguais, n só se têm o mesmo nome */
+	if (strcmp(docname, archive) == 0) {
+    	fprintf(stderr, "Voce nao pode inserir o arquivo container '%s' dentro dele mesmo!\n", archive);
+    	return -1;
+	}
 
 	FILE *doc_insercao = fopen(docname, "rb"); /* abrindo arquivo q quero inserir */
 
