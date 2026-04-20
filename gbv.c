@@ -186,6 +186,8 @@ int gbv_add(Library *lib, const char *archive, const char *docname) {
     lib->docs[lib->count].name[MAX_NAME - 1] = '\0'; /* tem q terminar com /0 */
     lib->docs[lib->count].size = tam_arquivo;
     lib->docs[lib->count].offset = sb.offset;
+	lib->docs[lib->count].date = time(NULL);
+	
     lib->count++; /* agora temos mais elementos (ou a mesma qtd se tivermos feito substituição) */
 
 	sb.qtd_doc = lib->count; /* atualizando biblioteca */
