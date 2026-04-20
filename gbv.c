@@ -357,7 +357,7 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
         memset(buffer, 0, sizeof(buffer)); /* limpa o buffer */    
         
         if ((lidos = fread(buffer, 1, ler_agr, arquivo)) != (size_t)ler_agr) {
-            fprintf(stderr, "Erro ao ler o arquivo.\n")
+            fprintf(stderr, "Erro ao ler o arquivo.\n");
             break;
         }
 
@@ -403,62 +403,3 @@ int gbv_view(const Library *lib, const char *archive, const char *docname) {
     fclose(arquivo);
     return 0;
 }
-
-int gbv_order(Library *lib, const char *archive, const char *criteria) {
-    if (!lib || !criteria) {
-        fprintf(stderr, "Ponteiro nulo.\n");
-        return -1;
-    }
-
-    /* strcmp compara a string passada com a constante "nome" */
-    if (strcmp(criteria, "nome") == 0) { /* dá zero se as strings forem iguais */
-        qsort(lib->docs, lib->count, sizeof(Document), ordem_alfabetica);
-    } else if (strcmp(criteria, "tamanho") == 0) {
-        qsort(lib->docs, lib->count, sizeof(Document), ordem_tamanho);
-    } else if (strcmp(criteria, "data") == 0) {
-        qsort(lib->docs, lib->count, sizeof(Document), ordem_cronologica);
-    } else {
-        fprintf(stderr, "Criterio de ordenacao invalido.\n");
-        return -1;
-    }
-
-    FILE *arquivo = fopen(archive, "rb+"); /* alterar o diretorio*/
-
-    if (!arquivo) {
-        fprintf(stderr, "Erro ao abrir o arquivo.\n");
-        return -1;
-    }
-
-    Superblock sb;
-    /* fread serve para ler os dados do arquivo e colocar no superbloco */
-    if (fread(&sb, sizeof(Superblock), 1, arquivo) != 1) {
-        fprintf(stderr, "Erro ao ler o arquivo.\n");
-        fclose(arquivo);
-        return -1;
-    }
-
-    sb.qtd_doc = lib->count;
-    
-    fseek(arquivo, sb.offset, SEEK_SET); /* coloca o ponteiro do arquivo na posicao do superbloco*/
-
-    /* escrevendo os dados no arquivo */
-    if (fwrite(lib->docs, sizeof(Document), lib->count, arquivo) != lib->count) {
-        fprintf(stderr, "Erro ao escrever no arquivo.\n");
-        fclose(arquivo);
-        return -1;
-    }
-
-    /* voltando o ponteiro pro inicio do arquivo */
-    rewind(arquivo);
-    int x = 0;
-
-    if (fwrite(&sb, sizeof(Superblock), 1, arquivo) != 1) {
-        fprintf(stderr, "Erro ao escrever no arquivo.\n");
-        x = -1;
-    }
-
-    fclose(arquivo);
-    return x;
-
-}
-
