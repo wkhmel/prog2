@@ -5,8 +5,8 @@
 #include "util.h"
 
 typedef struct {
-        int qtd_doc; // quantos documentos esse superbloco tem
-        long offset; // em qual offset começa a área do diretório
+    int qtd_doc; // quantos documentos esse superbloco tem
+    long offset; // em qual offset começa a área do diretório
 } Superblock;
 
 /* cria um container e coloca o espaço necessário de um superbloco p/ inicializar */
