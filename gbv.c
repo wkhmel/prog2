@@ -291,7 +291,7 @@ int gbv_list(const Library *lib) {
         printf("Documento atual: %d -- ", i);
         printf("Nome: %s -- ", lib->docs[i].name);
         printf("Tamanho: %ld -- ", lib->docs[i].size);
-        printf("Data de insercao: %s --", data);
+        printf("Data de insercao: %s -- ", data);
         printf("Posicao (offset): %ld\n", lib->docs[i].offset);
 		printf("-----------------------------------------------------------------------------------------------------\n");
     }
